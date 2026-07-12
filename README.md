@@ -42,6 +42,10 @@ architecture symptoms appear, including:
 ## What it enforces
 
 - Existing code is evidence of a model, not proof that the model is correct.
+- Existing behavior is first translated into a natural-language domain story and corrected by the
+  user before concepts are extracted.
+- Concepts, capabilities, events, relationships, and invariants are derived from the confirmed
+  domain story rather than copied from classes or schemas.
 - As-Is and To-Be concept models remain distinct.
 - Important claims are labeled as observed, user-stated, inferred, or proposed.
 - The user and Agent iteratively refine the concept relationship model.

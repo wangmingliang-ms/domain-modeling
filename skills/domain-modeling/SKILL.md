@@ -4,7 +4,7 @@ description: Use for any product feature or behavior change, including apparentl
 license: MIT
 metadata:
   author: wangmingliang-ms
-  version: "0.1.1"
+  version: "0.1.2"
 ---
 
 # Domain Modeling
@@ -54,6 +54,30 @@ Approval applies to the final To-Be domain model, not merely to a feature descri
 files to edit.
 </HARD-GATE>
 
+## The Story-to-Model Rule
+
+Domain concepts come from domain stories, not directly from class names, tables, API payloads, or
+task wording.
+
+For existing software, follow this order:
+
+```text
+code and behavior evidence
+  -> natural-language domain story
+  -> user correction and confirmation
+  -> domain concepts, capabilities, events, relationships, and invariants
+  -> domain model
+  -> implementation design
+```
+
+A ticket-style User Story can be useful input, but it is often too narrow. Expand it into a domain
+story that explains the actors, intent, starting conditions, business activities and decisions,
+state changes, outcomes, and important failure or interruption branches.
+
+Do not mechanically turn every noun into a class. The story reveals which nouns have domain
+meaning, which verbs are capabilities, which decisions are policies, which changes are events, and
+which statements imply invariants.
+
 ## The Two-Model Discipline
 
 Always distinguish:
@@ -77,10 +101,19 @@ For every important claim, label its source:
 
 Complete these phases in order.
 
-### 1. Gather domain evidence
+### 1. Reconstruct and confirm the domain story
 
 - Explore current architecture, documentation, data flow, recent changes, and failures.
-- Describe the user-visible behavior and business goal without implementation vocabulary.
+- Trace representative behavior end to end, from an actor's intent or triggering event to the
+  business outcome.
+- Include the normal path plus material boundary, failure, interruption, and concurrency scenarios.
+- Rewrite what the code does as a natural-language domain story without class, module, database,
+  API, UI, transport, callback, or framework vocabulary.
+- State the actors, intent, starting conditions, business actions and decisions, state changes,
+  outcomes, and unresolved questions.
+- Label each part of the story as observed, user-stated, or inferred.
+- Present the story to the user and ask one focused correction question at a time.
+- Revise until the user confirms that the story is an accurate enough account of the business.
 - Ask the user for missing business meaning when code cannot establish it.
 - Treat existing classes, tables, flags, and module boundaries as evidence, not truth.
 - For a bug, use systematic root-cause investigation first. Repeated fixes across different
@@ -89,7 +122,10 @@ Complete these phases in order.
 Do not equate a database schema, API payload, or class diagram with the domain model. These are
 representations that may flatten, duplicate, or distort domain concepts.
 
-### 2. Reconstruct the As-Is concept model
+Do not extract the concept model before the domain story is confirmed. If the user cannot confirm a
+part, preserve it as an explicit inference or open question instead of silently treating it as fact.
+
+### 2. Extract the As-Is concept model from the story
 
 Build a shared vocabulary from:
 
@@ -98,6 +134,16 @@ Build a shared vocabulary from:
 - commands, events, and outcomes;
 - actors and external systems;
 - lifecycles and time-dependent behavior.
+
+Use the confirmed story as the extraction source:
+
+- actors and business objects suggest candidate concepts;
+- verbs and responsibilities suggest capabilities;
+- decisions and calculations suggest policies;
+- meaningful state changes suggest domain events and lifecycle transitions;
+- “always,” “never,” and “only when” statements suggest invariants;
+- possession, participation, and handoff language suggests relationships, ownership, and
+  cardinality.
 
 For every concept, state what it means and what it is not. Resolve overloaded or synonymous terms
 before designing types.
@@ -179,18 +225,19 @@ Prefer reducing concepts and branches over adding another orchestration layer.
 
 Present:
 
-1. problem and domain vocabulary;
-2. evidence sources and unresolved assumptions;
-3. As-Is concept relationship diagram;
-4. As-Is problems and contradictions;
-5. approved To-Be concept relationship diagram;
-6. ownership and capability table;
-7. lifecycle/state transitions;
-8. invariants;
-9. proposed architecture and data flow;
-10. differences from the current design;
-11. alternatives and trade-offs;
-12. testing strategy based on invariants.
+1. confirmed domain story and important scenarios;
+2. problem and domain vocabulary;
+3. evidence sources and unresolved assumptions;
+4. As-Is concept relationship diagram;
+5. As-Is problems and contradictions;
+6. approved To-Be concept relationship diagram;
+7. ownership and capability table;
+8. lifecycle/state transitions;
+9. invariants;
+10. proposed architecture and data flow;
+11. differences from the current design;
+12. alternatives and trade-offs;
+13. testing strategy based on invariants.
 
 Scale the detail to the problem. A small change may need only a few paragraphs, but it never skips
 the model. After approval, write the specification, then create the implementation plan.
@@ -232,6 +279,8 @@ coordination state.
 | “It is a small field or endpoint.” | Small changes still encode ownership, lifecycle, and compatibility decisions. |
 | “The architecture already exists.” | Existing code is evidence, not proof that the abstraction is right. |
 | “The classes show us the domain model.” | Classes show the implemented interpretation; persistence and control flow may have distorted the domain. |
+| “The code already tells the story.” | Code shows execution details. Translate it into business language and let the user correct its meaning. |
+| “The nouns are obvious, so I can model them now.” | Concepts emerge from their role in a story; noun extraction alone creates accidental classes. |
 | “I can infer what the user means.” | Label the inference and confirm it; do not turn uncertainty into architecture. |
 | “One more flag or generation will make the race safe.” | Repeated coordination state usually means ownership or lifecycle is modeled at the wrong boundary. |
 | “The external update failed, so domain state must roll back.” | Presentation and transport failures do not undo domain facts unless the domain explicitly says so. |
@@ -245,6 +294,9 @@ coordination state.
 ## Red Flags — Stop
 
 - Searching for insertion points before naming the concepts
+- Extracting concepts directly from class, table, or API names before telling the domain story
+- Writing a domain story with implementation vocabulary
+- Building a concept diagram before the user has corrected the inferred business narrative
 - Producing only one diagram and calling it both current and proposed
 - Presenting an inferred relationship as a confirmed domain fact
 - Asking the user to approve a finished model without exploring uncertain concepts
