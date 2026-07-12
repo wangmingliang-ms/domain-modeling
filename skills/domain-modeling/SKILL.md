@@ -1,10 +1,10 @@
 ---
 name: domain-modeling
-description: Use when solving a product problem or designing, implementing, extending, repairing, or refactoring any feature, before choosing architecture or writing implementation code
+description: Use for any product feature or behavior change, including apparently small additions to existing code, before architecture or implementation; also use when state has multiple writers, behavior depends on flags or callback order, fixes move bugs between paths, late events mutate completed work, or one behavior spans unrelated modules
 license: MIT
 metadata:
   author: wangmingliang-ms
-  version: "0.1.0"
+  version: "0.1.1"
 ---
 
 # Domain Modeling
@@ -197,19 +197,32 @@ the model. After approval, write the specification, then create the implementati
 
 ## Architecture Warning
 
-STOP and redesign when any of these appear:
+The following signals mean the implementation is exposing a modeling problem:
 
-- three or more fixes reveal new problems in different components;
-- the same business fact is stored or mutated in multiple places;
-- correctness depends on flag combinations or callback ordering;
-- multiple components believe they own the same object or lifecycle;
-- external I/O failure rolls back or corrupts domain truth;
-- adding one behavior requires branches across many unrelated modules;
-- tests enumerate implementation paths but cannot state global invariants.
+1. Fixing one path moves the same bug to another path.
+2. Every fix adds another flag, token, generation, guard, or rollback branch.
+3. The same business fact is stored or mutated in multiple modules.
+4. A UI, transport, persistence, or delivery object owns a business lifecycle.
+5. External I/O success or failure determines or rolls back domain truth.
+6. Terminal or historical state can still be changed by late callbacks.
+7. Nobody can answer in one sentence who owns a mutable fact.
+8. Tests keep growing while the global invariants remain hard to state.
+9. Controllers, reducers, and orchestration grow faster than the domain vocabulary.
+10. A migration or compatibility path keeps two semantic writers active.
+11. One behavior requires special branches across unrelated modules.
+12. The design can only be explained with modules, callbacks, and execution order rather than
+    domain concepts.
 
-Do not add Fix #4 to an architecture that has not been reconsidered.
-When this warning triggers, do not pre-commit to a surgical fix. First determine whether the existing
-architecture can express the required invariants without additional coordination state.
+Use these mandatory checkpoints:
+
+- **At the start of every feature:** perform a lightweight As-Is model check.
+- **Before adding coordination state:** stop and re-evaluate ownership in Phase 3.
+- **After a second cross-module regression:** perform a full To-Be redesign. Do not wait for a
+  fourth fix.
+
+Any structural signal above is enough to return to Phase 3. Do not pre-commit to a surgical fix.
+First determine whether the current model can express the required invariants without more
+coordination state.
 
 ## Common Rationalizations
 
@@ -220,6 +233,10 @@ architecture can express the required invariants without additional coordination
 | “The architecture already exists.” | Existing code is evidence, not proof that the abstraction is right. |
 | “The classes show us the domain model.” | Classes show the implemented interpretation; persistence and control flow may have distorted the domain. |
 | “I can infer what the user means.” | Label the inference and confirm it; do not turn uncertainty into architecture. |
+| “One more flag or generation will make the race safe.” | Repeated coordination state usually means ownership or lifecycle is modeled at the wrong boundary. |
+| “The external update failed, so domain state must roll back.” | Presentation and transport failures do not undo domain facts unless the domain explicitly says so. |
+| “We need old and new writers active during migration.” | Two semantic writers create an overlap whose invariants cannot be guaranteed. Define one cutover boundary. |
+| “The reducer and controller already handle every case.” | Sophisticated control flow may be compensating for the wrong concepts or aggregate boundary. |
 | “A redesign is too expensive.” | Re-deriving the design may validate the current structure; it does not mandate a rewrite. |
 | “I only need the smallest patch.” | The smallest local diff can create the largest global complexity. |
 | “I identified the relevant modules.” | Module discovery is not domain discovery. |
@@ -234,6 +251,10 @@ architecture can express the required invariants without additional coordination
 - Proposing fields, flags, callbacks, or classes before assigning ownership
 - Copying the existing architecture into the “design”
 - Treating UI, API, transport, or database representations as the domain object by default
+- Allowing presentation, persistence, timers, or callbacks to become additional semantic writers
+- Letting late work mutate terminal or historical state
+- Adding another identity token or ordering guard without revisiting the aggregate boundary
+- Keeping parallel legacy and replacement writers alive for convenience
 - Saying “surgical fix” after repeated cross-component regressions
 - Producing an implementation plan without explicit invariants
 - Using “pragmatic” to justify skipping redesign

@@ -20,6 +20,25 @@ Install with GitHub CLI:
 gh skill install wangmingliang-ms/domain-modeling domain-modeling
 ```
 
+## When it activates
+
+Agent Skills use progressive disclosure:
+
+1. The Agent initially sees only Skill metadata, primarily `name` and `description`.
+2. The Agent loads the full `SKILL.md` only after the description matches the current task.
+3. Supporting resources are loaded later only when the Skill asks for them.
+
+The README is for people; it is not the reliable activation mechanism. Trigger conditions therefore
+belong in the `description` field. This Skill is designed to activate before every product feature
+or behavior change, including apparently small additions to existing code. It also activates when
+architecture symptoms appear, including:
+
+- the same state has multiple writers;
+- correctness depends on flags or callback order;
+- fixes move bugs between paths;
+- late events mutate completed work;
+- a behavior requires branches across unrelated modules.
+
 ## What it enforces
 
 - Existing code is evidence of a model, not proof that the model is correct.
