@@ -37,7 +37,9 @@ architecture symptoms appear, including:
 - correctness depends on flags or callback order;
 - fixes move bugs between paths;
 - late events mutate completed work;
-- a behavior requires branches across unrelated modules.
+- a behavior requires branches across unrelated modules;
+- domain workflows carry UI, transport, or persistence identifiers;
+- coordination machinery grows faster than business logic.
 
 ## What it enforces
 
@@ -47,6 +49,10 @@ architecture symptoms appear, including:
 - Concepts, capabilities, events, relationships, and invariants are derived from the confirmed
   domain story rather than copied from classes or schemas.
 - As-Is and To-Be concept models remain distinct.
+- A coordination complexity test detects parallel lifecycle models, cross-layer feature flags,
+  leaked technical identifiers, competing adapters, and test suites dominated by race permutations.
+- A subtraction test identifies old writers, flags, guards, and compatibility paths made unnecessary
+  by the approved model.
 - Important claims are labeled as observed, user-stated, inferred, or proposed.
 - The user and Agent iteratively refine the concept relationship model.
 - Implementation waits until the To-Be model and its invariants are approved.

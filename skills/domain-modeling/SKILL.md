@@ -1,10 +1,10 @@
 ---
 name: domain-modeling
-description: Use for any product feature or behavior change, including apparently small additions to existing code, before architecture or implementation; also use when state has multiple writers, behavior depends on flags or callback order, fixes move bugs between paths, late events mutate completed work, or one behavior spans unrelated modules
+description: Use for any product feature or behavior change, including apparently small additions to existing code, before architecture or implementation; also use when state has multiple writers, behavior depends on flags or callback order, fixes move bugs between paths, late events mutate completed work, one behavior spans unrelated modules, or domain workflows carry UI, transport, or persistence identifiers
 license: MIT
 metadata:
   author: wangmingliang-ms
-  version: "0.1.2"
+  version: "0.1.3"
 ---
 
 # Domain Modeling
@@ -172,9 +172,15 @@ Look for:
 
 - one domain concept split across several implementation objects;
 - one implementation object combining unrelated domain concepts;
+- parallel state representations or lifecycle models for the same domain concept;
 - stored flags that duplicate a lifecycle state or relationship;
+- rollout flags that fork the same semantic operation across several architectural layers;
 - concepts named after UI, transport, database, or workflow accidents;
+- domain commands, queues, or records carrying UI, transport, or persistence identifiers solely so
+  downstream layers can coordinate side effects;
 - relationships that exist only to coordinate callbacks;
+- adapters that allow competing semantic models to mutate the same external artifact;
+- protocol/client objects that also own domain state, timers, rendering, or delivery;
 - behavior with no clear owner;
 - differences between the user's language and the code's language;
 - business rules that cannot be stated without mentioning modules.
@@ -221,6 +227,20 @@ Compare the derived model with the existing implementation:
 
 Prefer reducing concepts and branches over adding another orchestration layer.
 
+Apply the subtraction test before accepting the implementation design:
+
+- For every flag, token, generation, sequence, adapter, queue, and guard, name the domain fact it
+  represents. If none exists, it is coordination cost.
+- List the old fields, branches, writers, and compatibility paths that the approved model makes
+  unnecessary.
+- A migration may contain two implementations, but only one may own semantic truth for a given
+  scope at a time. Define the cutover boundary, removal condition, and final single-writer state.
+- If the proposed model only adds a new layer while preserving all old writers and coordination
+  paths, the redesign is incomplete.
+
+Code deletion is not the goal. It is a common consequence of replacing coordination with explicit
+concepts, relationships, ownership, and derived state.
+
 ### 6. Present the complete design and obtain approval
 
 Present:
@@ -242,6 +262,34 @@ Present:
 Scale the detail to the problem. A small change may need only a few paragraphs, but it never skips
 the model. After approval, write the specification, then create the implementation plan.
 
+## The Coordination Complexity Test
+
+Ask:
+
+> Does most of this code express business meaning, or coordinate several components' competing
+> interpretations of the same business fact?
+
+Stop and return to Phase 3 when coordination becomes the dominant complexity. Strong signals are:
+
+1. The same concept has parallel state representations or lifecycle engines.
+2. One rollout flag forks the same behavior across three or more architectural layers.
+3. Domain workflows carry UI, transport, or persistence identifiers so several layers can update
+   the same artifact.
+4. One client, controller, or runtime combines protocol handling, domain state, scheduling,
+   presentation, and delivery.
+5. An adapter allows old and new semantic models to write the same external artifact.
+6. Correctness depends on a growing set of ownership tokens, generations, sequence numbers, skip
+   markers, locks, or manually chained queues that do not exist in the domain story.
+7. Most tests enumerate callback order, races, and stale completions rather than business rules and
+   invariants.
+8. “Temporary” migration scaffolding develops its own configuration, commands, rollback paths,
+   monitoring, and maintenance burden.
+
+These mechanisms are not automatically wrong. They become a modeling signal when they compensate
+for unclear ownership or duplicate truth. Reconstruct the business fact they coordinate, assign one
+semantic owner, keep one canonical representation, derive dependent views, and push side-effect
+reconciliation to the boundary.
+
 ## Architecture Warning
 
 The following signals mean the implementation is exposing a modeling problem:
@@ -259,6 +307,9 @@ The following signals mean the implementation is exposing a modeling problem:
 11. One behavior requires special branches across unrelated modules.
 12. The design can only be explained with modules, callbacks, and execution order rather than
     domain concepts.
+13. Domain workflows carry technical identifiers only so multiple layers can coordinate updates to
+    the same external artifact.
+14. Coordination code grows faster than code that expresses business rules.
 
 Use these mandatory checkpoints:
 
@@ -285,6 +336,10 @@ coordination state.
 | “One more flag or generation will make the race safe.” | Repeated coordination state usually means ownership or lifecycle is modeled at the wrong boundary. |
 | “The external update failed, so domain state must roll back.” | Presentation and transport failures do not undo domain facts unless the domain explicitly says so. |
 | “We need old and new writers active during migration.” | Two semantic writers create an overlap whose invariants cannot be guaranteed. Define one cutover boundary. |
+| “The adapter keeps the old and new models safely isolated.” | If both can write the same artifact, the adapter is coordinating competing truth, not isolating it. |
+| “Those IDs are only passed through for convenience.” | Technical identifiers in domain workflows reveal that side-effect ownership has leaked inward. |
+| “The races are covered by tests.” | Interleaving tests can verify coordination but cannot explain why so much coordination is necessary. |
+| “This infrastructure is temporary.” | Temporary migration machinery needs an owner, removal condition, and single-writer cutover or it becomes architecture. |
 | “The reducer and controller already handle every case.” | Sophisticated control flow may be compensating for the wrong concepts or aggregate boundary. |
 | “A redesign is too expensive.” | Re-deriving the design may validate the current structure; it does not mandate a rewrite. |
 | “I only need the smallest patch.” | The smallest local diff can create the largest global complexity. |
@@ -303,9 +358,13 @@ coordination state.
 - Proposing fields, flags, callbacks, or classes before assigning ownership
 - Copying the existing architecture into the “design”
 - Treating UI, API, transport, or database representations as the domain object by default
+- Threading UI, transport, or persistence identifiers through domain commands and queues
 - Allowing presentation, persistence, timers, or callbacks to become additional semantic writers
 - Letting late work mutate terminal or historical state
 - Adding another identity token or ordering guard without revisiting the aggregate boundary
+- Maintaining parallel representations or lifecycle engines for one concept
+- Spreading one rollout flag through three or more architectural layers
+- Accepting a test suite dominated by race permutations while business invariants remain unclear
 - Keeping parallel legacy and replacement writers alive for convenience
 - Saying “surgical fix” after repeated cross-component regressions
 - Producing an implementation plan without explicit invariants
